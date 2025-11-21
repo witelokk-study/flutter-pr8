@@ -1,4 +1,4 @@
-package com.example.pr7
+package com.example.pr8
 
 import io.flutter.embedding.android.FlutterActivity
 
