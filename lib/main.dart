@@ -6,15 +6,16 @@ import 'screen/calendar.dart';
 import 'screen/task_detail.dart';
 import 'screen/stats.dart';
 import 'app_state.dart';
+import 'service_locator.dart';
 
 void main() {
-  final appState = AppState();
-  runApp(TaskPlannerApp(appState: appState));
+  setupServiceLocator();
+  runApp(TaskPlannerApp());
 }
 
 class TaskPlannerApp extends StatelessWidget {
-  final AppState appState;
-  TaskPlannerApp({required this.appState});
+  TaskPlannerApp({super.key});
+  AppState get appState => getIt<AppState>();
   late final GoRouter _router = GoRouter(
     initialLocation: '/',
     routes: [
