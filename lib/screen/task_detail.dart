@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../task.dart';
 import 'package:intl/intl.dart';
+import '../app_state.dart';
 
 class TaskDetailScreen extends StatefulWidget {
-  final Task task;
-  final VoidCallback onUpdate;
+  final int taskIndex;
 
-  TaskDetailScreen({required this.task, required this.onUpdate});
+  TaskDetailScreen({required this.taskIndex});
 
   @override
   _TaskDetailScreenState createState() => _TaskDetailScreenState();
@@ -16,20 +16,37 @@ class TaskDetailScreen extends StatefulWidget {
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
-  late DateTime _date;
+  DateTime? _date;
+  Task? _task;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.task.title);
-    _descController = TextEditingController(text: widget.task.description);
-    _date = widget.task.date;
+    _titleController = TextEditingController();
+    _descController = TextEditingController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) return;
+    final appState = AppStateProvider.of(context);
+    if (widget.taskIndex < 0 || widget.taskIndex >= appState.tasks.length) {
+      _task = null;
+    } else {
+      _task = appState.tasks[widget.taskIndex];
+      _titleController.text = _task!.title;
+      _descController.text = _task!.description;
+      _date = _task!.date;
+    }
+    _initialized = true;
   }
 
   Future<void> _pickDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _date,
+      initialDate: _date ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
@@ -41,16 +58,32 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   void _save() {
-    widget.task.title = _titleController.text;
-    widget.task.description = _descController.text;
-    widget.task.date = _date;
-    widget.onUpdate();
+    final appState = AppStateProvider.of(context);
+    if (_task == null || _date == null) {
+      context.pop();
+      return;
+    }
+    _task!
+      ..title = _titleController.text
+      ..description = _descController.text
+      ..date = _date!;
+    appState.notify();
     
     context.pop();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_task == null || _date == null) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: BackButton(onPressed: () => context.pop()),
+          title: Text('Детали задачи'),
+        ),
+        body: Center(child: Text('Task not found')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.pop()),
@@ -70,7 +103,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
             Row(
               children: [
-                Text('Дата: ${DateFormat('dd.MM.yyyy').format(_date)}'),
+                Text('Дата: ${DateFormat('dd.MM.yyyy').format(_date!)}'),
                 TextButton.icon(
                   icon: Icon(Icons.calendar_today),
                   onPressed: () => _pickDate(context),
@@ -80,10 +113,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
             CheckboxListTile(
               title: Text('Выполнено'),
-              value: widget.task.completed,
+              value: _task!.completed,
               onChanged: (val) {
                 setState(() {
-                  widget.task.completed = val ?? false;
+                  _task!.completed = val ?? false;
                 });
               },
             ),

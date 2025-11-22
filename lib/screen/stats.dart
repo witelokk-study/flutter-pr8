@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import '../task.dart';
+import '../app_state.dart';
 
 class StatsScreen extends StatelessWidget {
-  final List<Task> tasks;
-  StatsScreen({required this.tasks});
-
   @override
   Widget build(BuildContext context) {
+    final tasks = AppStateProvider.of(context).tasks;
     int total = tasks.length;
     int completed = tasks.where((t) => t.completed).length;
     int pending = total - completed;

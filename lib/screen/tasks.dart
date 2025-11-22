@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import '../task.dart';
 import 'package:intl/intl.dart';
+import '../app_state.dart';
+import 'package:go_router/go_router.dart';
 
 class TasksScreen extends StatefulWidget {
-  final List<Task> tasks;
-  final VoidCallback onUpdate;
-  final Function(int) onTaskTap;
-
-  TasksScreen({required this.tasks, required this.onUpdate, required this.onTaskTap});
-
   @override
   _TasksScreenState createState() => _TasksScreenState();
 }
@@ -19,11 +15,11 @@ class _TasksScreenState extends State<TasksScreen> {
   DateTime _selectedDate = DateTime.now();
 
   void _addTask() {
+    final appState = AppStateProvider.of(context);
     if (_controllerTitle.text.isEmpty) return;
-    widget.tasks.add(Task(title: _controllerTitle.text, description: _controllerDesc.text, date: _selectedDate));
+    appState.addTask(Task(title: _controllerTitle.text, description: _controllerDesc.text, date: _selectedDate));
     _controllerTitle.clear();
     _controllerDesc.clear();
-    widget.onUpdate();
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -66,20 +62,19 @@ class _TasksScreenState extends State<TasksScreen> {
         ),
         Expanded(
           child: ListView(
-            children: widget.tasks.map((task) {
+            children: AppStateProvider.of(context).tasks.map((task) {
               return CheckboxListTile(
                 title: Text('${task.title} (${DateFormat('dd.MM.yyyy').format(task.date)})'),
                 subtitle: Text(task.description),
                 value: task.completed,
                 onChanged: (val) {
-                  setState(() {
-                    task.completed = val ?? false;
-                  });
-                  widget.onUpdate();
+                  task.completed = val ?? false;
+                  AppStateProvider.of(context).notify();
                 },
                 secondary: IconButton(icon: Icon(Icons.info), onPressed: () {
-                  final idx = widget.tasks.indexOf(task);
-                  widget.onTaskTap(idx);
+                  final tasks = AppStateProvider.of(context).tasks;
+                  final idx = tasks.indexOf(task);
+                  context.push('/task/$idx');
                 }),
               );
             }).toList(),

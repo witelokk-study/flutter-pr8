@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import '../task.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../app_state.dart';
+import 'package:go_router/go_router.dart';
 
 
 class CalendarScreen extends StatefulWidget {
-  final List<Task> tasks;
-  final Function(int) onTaskTap;
-
-  CalendarScreen({required this.tasks, required this.onTaskTap});
-
   @override
   _CalendarScreenState createState() => _CalendarScreenState();
 }
@@ -17,33 +14,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  Map<DateTime, List<Task>> _groupedTasks = {};
-
   @override
   void initState() {
     super.initState();
-    _groupTasks();
     _selectedDay = _focusedDay;
   }
 
-  void _groupTasks() {
-    _groupedTasks.clear();
-    for (var task in widget.tasks) {
+  Map<DateTime, List<Task>> _groupTasks(List<Task> tasks) {
+    final grouped = <DateTime, List<Task>>{};
+    for (var task in tasks) {
       final day = DateTime(task.date.year, task.date.month, task.date.day);
-      if (_groupedTasks[day] == null) {
-        _groupedTasks[day] = [];
-      }
-      _groupedTasks[day]!.add(task);
+      grouped.putIfAbsent(day, () => []).add(task);
     }
+    return grouped;
   }
 
-  List<Task> _tasksForDay(DateTime day) {
+  List<Task> _tasksForDay(DateTime day, Map<DateTime, List<Task>> tasksByDay) {
     final date = DateTime(day.year, day.month, day.day);
-    return _groupedTasks[date] ?? [];
+    return tasksByDay[date] ?? [];
   }
 
   @override
   Widget build(BuildContext context) {
+    final tasksByDay = _groupTasks(AppStateProvider.of(context).tasks);
     return Scaffold(
       appBar: AppBar(title: Text('Календарь')),
       body: Column(
@@ -54,7 +47,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           focusedDay: _focusedDay,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           calendarFormat: CalendarFormat.month,
-          eventLoader: _tasksForDay,
+          eventLoader: (day) => _tasksForDay(day, tasksByDay),
           onDaySelected: (selectedDay, focusedDay) {
             setState(() {
               _selectedDay = selectedDay;
@@ -71,16 +64,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: _buildTaskList(),
+          child: _buildTaskList(tasksByDay),
         ),
       ],
     ),
     );
   }
 
-  Widget _buildTaskList() {
+  Widget _buildTaskList(Map<DateTime, List<Task>> tasksByDay) {
     if (_selectedDay == null) return Center(child: Text('Выберите дату'));
-    final tasks = _tasksForDay(_selectedDay!);
+    final appState = AppStateProvider.of(context);
+    final tasks = _tasksForDay(_selectedDay!, tasksByDay);
     if (tasks.isEmpty) return Center(child: Text('Задач на этот день нет'));
     return ListView.builder(
       itemCount: tasks.length,
@@ -95,11 +89,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
               setState(() {
                 task.completed = val ?? false;
               });
+              appState.notify();
             },
           ),
           onTap: () {
-            final idx = widget.tasks.indexOf(task);
-            widget.onTaskTap(idx);
+            final idx = appState.tasks.indexOf(task);
+            context.push('/task/$idx');
           },
         );
       },

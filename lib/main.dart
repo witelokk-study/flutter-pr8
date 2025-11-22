@@ -5,17 +5,11 @@ import 'screen/tasks.dart';
 import 'screen/calendar.dart';
 import 'screen/task_detail.dart';
 import 'screen/stats.dart';
-import 'task.dart';
+import 'app_state.dart';
 
 void main() {
   final appState = AppState();
   runApp(TaskPlannerApp(appState: appState));
-}
-
-class AppState extends ChangeNotifier {
-  final List<Task> tasks = [];
-
-  void notify() => notifyListeners();
 }
 
 class TaskPlannerApp extends StatelessWidget {
@@ -58,33 +52,29 @@ class TaskPlannerApp extends StatelessWidget {
           GoRoute(
             path: '/',
             name: 'home',
-            pageBuilder: (context, state) => NoTransitionPage(child: HomeScreen(tasks: appState.tasks, onTaskTap: (idx) => context.push('/task/$idx'))),
+            pageBuilder: (context, state) => NoTransitionPage(child: HomeScreen()),
           ),
           GoRoute(
             path: '/tasks',
             name: 'tasks',
-            pageBuilder: (context, state) => NoTransitionPage(child: TasksScreen(tasks: appState.tasks, onUpdate: () => appState.notify(), onTaskTap: (idx) => context.push('/task/$idx'))),
+            pageBuilder: (context, state) => NoTransitionPage(child: TasksScreen()),
           ),
           GoRoute(
             path: '/calendar',
             name: 'calendar',
-            pageBuilder: (context, state) => NoTransitionPage(child: CalendarScreen(tasks: appState.tasks, onTaskTap: (idx) => context.push('/task/$idx'))),
+            pageBuilder: (context, state) => NoTransitionPage(child: CalendarScreen()),
           ),
           GoRoute(
             path: '/stats',
             name: 'stats',
-            pageBuilder: (context, state) => NoTransitionPage(child: StatsScreen(tasks: appState.tasks)),
+            pageBuilder: (context, state) => NoTransitionPage(child: StatsScreen()),
           ),
           GoRoute(
             path: '/task/:taskIndex',
             name: 'taskDetail',
             builder: (context, state) {
               final idx = int.tryParse(state.pathParameters['taskIndex'] ?? '-1') ?? -1;
-              if (idx < 0 || idx >= appState.tasks.length) {
-                return Scaffold(body: Center(child: Text('Task not found')));
-              }
-              final task = appState.tasks[idx];
-              return TaskDetailScreen(task: task, onUpdate: () => appState.notify());
+              return TaskDetailScreen(taskIndex: idx);
             },
           ),
         ],
@@ -95,11 +85,13 @@ class TaskPlannerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Task Planner',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      routerConfig: _router,
+    return AppStateProvider(
+      state: appState,
+      child: MaterialApp.router(
+        title: 'Task Planner',
+        theme: ThemeData(primarySwatch: Colors.blue),
+        routerConfig: _router,
+      ),
     );
   }
 }
-
